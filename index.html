@@ -496,90 +496,90 @@ function cargarConfiguracion() {
     .catch(err => console.error("Error al cargar config:", err));
 }
 
-      function cargarServicios() {
-        google.script.run.withSuccessHandler(function(data) {
-          serviciosDisponibles = data;
-          const tipoSelect = document.getElementById('tipoServicio');
-          tipoSelect.innerHTML = '<option value="">Elegí un tipo</option>';
-          const tiposUnicos = [...new Set(data.map(s => s.tipo))].sort();
-          tiposUnicos.forEach(tipo => {
-            const opt = document.createElement('option');
-            opt.value = tipo;
-            opt.textContent = tipo;
-            tipoSelect.appendChild(opt);
-          });
-          document.getElementById('subServicio').innerHTML = '<option value="">Elegí una opción</option>';
-        }).obtenerServiciosActivos();
-      }
-
-      document.getElementById('tipoServicio').addEventListener('change', function() {
-        const tipoElegido = this.value;
-        const subSelect = document.getElementById('subServicio');
-        const grupoSubServicio = document.getElementById('grupoSubServicio');
-        const campoPrecio = document.getElementById('inputPrecio');
-
-        subSelect.innerHTML = '<option value="">Elegí una opción</option>';
-        campoPrecio.value = "";
-
-        if (!tipoElegido) return;
-
-        const subopcionesFiltradas = serviciosDisponibles.filter(s => s.tipo === tipoElegido && s.subopcion.trim() !== '');
-
-        if (subopcionesFiltradas.length === 0) {
-          grupoSubServicio.classList.remove('visible');
-          grupoSubServicio.classList.add('oculto');
-
-          const servicio = serviciosDisponibles.find(s => s.tipo === tipoElegido);
-          if (servicio) {
-            subSelect.dataset.codigoServicio = servicio.codigo;
-            actualizarPrecio(servicio.codigo);
-          }
-        } else {
-          grupoSubServicio.classList.remove('oculto');
-          grupoSubServicio.classList.add('visible');
-          const mapaSubopciones = new Map();
-          subopcionesFiltradas.forEach(s => {
-            if (!mapaSubopciones.has(s.subopcion)) {
-              mapaSubopciones.set(s.subopcion, s.codigo);
-            }
-          });
-          mapaSubopciones.forEach((codigo, subopcion) => {
-            const opt = document.createElement('option');
-            opt.value = codigo;
-            opt.textContent = subopcion;
-            subSelect.appendChild(opt);
-          });
-        }
+  let serviciosDisponibles = [];
+let carrito = [];
+     function cargarServicios() {
+  fetch(`${WEB_APP_URL}?action=obtenerServiciosActivos`)
+    .then(res => res.json())
+    .then(data => {
+      serviciosDisponibles = data;
+      const tipoSelect = document.getElementById('tipoServicio');
+      tipoSelect.innerHTML = '<option value="">Elegí un tipo</option>';
+      
+      const tiposUnicos = [...new Set(data.map(s => s.tipo))].sort();
+      tiposUnicos.forEach(tipo => {
+        const opt = document.createElement('option');
+        opt.value = tipo;
+        opt.textContent = tipo;
+        tipoSelect.appendChild(opt);
       });
-
-      document.getElementById('subServicio').addEventListener('change', function() {
-        const codigoElegido = this.value;
-        if (codigoElegido) {
-          actualizarPrecio(codigoElegido);
-        } else {
-          document.getElementById('inputPrecio').value = "";
-        }
-      });
-
-      function actualizarPrecio(codigo) {
-  google.script.run.withSuccessHandler(function(precio) {
-    document.getElementById("inputPrecio").value = precio ? "$" + precio : "No disponible";
-  }).obtenerPrecioServicio(codigo);
-
-  actualizarDuracion(codigo);
+      document.getElementById('subServicio').innerHTML = '<option value="">Elegí una opción</option>';
+    })
+    .catch(err => console.error("Error cargando servicios:", err));
 }
 
-function actualizarDuracion(codigo) {
-  google.script.run.withSuccessHandler(function(duracion) {
+// 2. EVENTO CAMBIO DE TIPO (Filtra subopciones)
+document.getElementById('tipoServicio').addEventListener('change', function() {
+  const tipoElegido = this.value;
+  const subSelect = document.getElementById('subServicio');
+  const grupoSubServicio = document.getElementById('grupoSubServicio');
+  const campoPrecio = document.getElementById('inputPrecio');
+
+  subSelect.innerHTML = '<option value="">Elegí una opción</option>';
+  campoPrecio.value = "";
+
+  if (!tipoElegido) return;
+
+  const subopcionesFiltradas = serviciosDisponibles.filter(s => s.tipo === tipoElegido && s.subopcion.trim() !== '');
+
+  if (subopcionesFiltradas.length === 0) {
+    grupoSubServicio.classList.remove('visible');
+    grupoSubServicio.classList.add('oculto');
+    const servicio = serviciosDisponibles.find(s => s.tipo === tipoElegido);
+    if (servicio) {
+      subSelect.dataset.codigoServicio = servicio.codigo;
+      actualizarPrecioYDuracion(servicio.codigo);
+    }
+  } else {
+    grupoSubServicio.classList.remove('oculto');
+    grupoSubServicio.classList.add('visible');
+    const mapaSubopciones = new Map();
+    subopcionesFiltradas.forEach(s => {
+      if (!mapaSubopciones.has(s.subopcion)) {
+        mapaSubopciones.set(s.subopcion, s.codigo);
+      }
+    });
+    mapaSubopciones.forEach((codigo, subopcion) => {
+      const opt = document.createElement('option');
+      opt.value = codigo;
+      opt.textContent = subopcion;
+      subSelect.appendChild(opt);
+    });
+  }
+});
+
+// 3. EVENTO CAMBIO DE SUBSERVICIO
+document.getElementById('subServicio').addEventListener('change', function() {
+  const codigoElegido = this.value;
+  if (codigoElegido) {
+    actualizarPrecioYDuracion(codigoElegido);
+  } else {
+    document.getElementById('inputPrecio').value = "";
+    document.getElementById('inputDuracion').value = "";
+  }
+});
+
+// 4. ACTUALIZAR PRECIO Y DURACIÓN (Saca los datos del JSON local, sin viajar a Google)
+function actualizarPrecioYDuracion(codigo) {
+  const servicio = serviciosDisponibles.find(s => s.codigo === codigo);
+  if (servicio) {
+    document.getElementById("inputPrecio").value = servicio.precio ? "$" + servicio.precio : "No disponible";
     const campoDuracion = document.getElementById('inputDuracion');
     if (campoDuracion) {
-      campoDuracion.value = duracion ? duracion + " min" : "No disponible";
+      campoDuracion.value = servicio.duracion ? servicio.duracion + " min" : "No disponible";
     }
-  }).obtenerDuracionServicio(codigo);
+  }
 }
-
-let carrito = [];
-
 
 document.getElementById('btnAgregarServicio').addEventListener('click', () => {
   const tipoSelect = document.getElementById('tipoServicio');
