@@ -496,69 +496,51 @@ function cargarConfiguracion() {
     .catch(err => console.error("Error al cargar config:", err));
 }
 
-  let serviciosDisponibles = [];
+  // 1. Asegurate de que esta sea la URL de la "Nueva Implementación"
+const WEB_APP_URL = "https://script.google.com/macros/s/AKfycbx96euWipJsLQlcD2zT9zFQeoUUtVcEyMpQQB5l82eliGEQcWKvj1-4HI7vwYAnwnkv/exec"; 
+
+let serviciosDisponibles = [];
 let carrito = [];
 
-// 1. CARGAR SERVICIOS
+// 2. FUNCIÓN PARA TRAER LOS SERVICIOS DESDE EL EXCEL
 function cargarServicios() {
+  // El secreto está en este "?action=obtenerServiciosActivos"
   fetch(`${WEB_APP_URL}?action=obtenerServiciosActivos`)
     .then(res => res.json())
     .then(data => {
       serviciosDisponibles = data;
       const tipoSelect = document.getElementById('tipoServicio');
-      tipoSelect.innerHTML = '<option value="">Elegí un tipo</option>';
       
+      // Limpiamos el selector y cargamos los tipos (Peluquería, Estética, etc.)
+      tipoSelect.innerHTML = '<option value="">Elegí un tipo</option>';
       const tiposUnicos = [...new Set(data.map(s => s.tipo))].sort();
+      
       tiposUnicos.forEach(tipo => {
         const opt = document.createElement('option');
         opt.value = tipo;
         opt.textContent = tipo;
         tipoSelect.appendChild(opt);
       });
-      document.getElementById('subServicio').innerHTML = '<option value="">Elegí una opción</option>';
+      console.log("Servicios cargados correctamente");
     })
-    .catch(err => console.error("Error cargando servicios:", err));
+    .catch(err => {
+      console.error("Error al cargar servicios:", err);
+    });
 }
 
-// 2. EVENTO CAMBIO DE TIPO
-document.getElementById('tipoServicio').addEventListener('change', function() {
-  const tipoElegido = this.value;
-  const subSelect = document.getElementById('subServicio');
-  const grupoSubServicio = document.getElementById('grupoSubServicio');
-  const campoPrecio = document.getElementById('inputPrecio');
-
-  subSelect.innerHTML = '<option value="">Elegí una opción</option>';
-  campoPrecio.value = "";
-
-  if (!tipoElegido) return;
-
-  const subopcionesFiltradas = serviciosDisponibles.filter(s => s.tipo === tipoElegido && s.subopcion.trim() !== '');
-
-  if (subopcionesFiltradas.length === 0) {
-    grupoSubServicio.classList.remove('visible');
-    grupoSubServicio.classList.add('oculto');
-    const servicio = serviciosDisponibles.find(s => s.tipo === tipoElegido);
-    if (servicio) {
-      subSelect.dataset.codigoServicio = servicio.codigo;
-      actualizarPrecioYDuracion(servicio.codigo); // <--- Llama a la función de abajo
-    }
-  } else {
-    grupoSubServicio.classList.remove('oculto');
-    grupoSubServicio.classList.add('visible');
-    const mapaSubopciones = new Map();
-    subopcionesFiltradas.forEach(s => {
-      if (!mapaSubopciones.has(s.subopcion)) {
-        mapaSubopciones.set(s.subopcion, s.codigo);
-      }
-    });
-    mapaSubopciones.forEach((codigo, subopcion) => {
-      const opt = document.createElement('option');
-      opt.value = codigo;
-      opt.textContent = subopcion;
-      subSelect.appendChild(opt);
-    });
+// 3. FUNCIÓN PARA MOSTRAR PRECIO Y DURACIÓN
+function actualizarPrecioYDuracion(codigo) {
+  const servicio = serviciosDisponibles.find(s => s.codigo === codigo);
+  if (servicio) {
+    const p = document.getElementById("inputPrecio");
+    const d = document.getElementById('inputDuracion');
+    if (p) p.value = servicio.precio ? "$" + servicio.precio : "";
+    if (d) d.value = servicio.duracion ? servicio.duracion + " min" : "";
   }
-});
+}
+
+// 4. ESTO ES CLAVE: Ejecutar la función apenas carga la página
+window.onload = cargarServicios;
 
 // 3. EVENTO CAMBIO DE SUBSERVICIO
 document.getElementById('subServicio').addEventListener('change', function() {
