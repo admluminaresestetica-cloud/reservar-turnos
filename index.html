@@ -498,7 +498,9 @@ function cargarConfiguracion() {
 
   let serviciosDisponibles = [];
 let carrito = [];
-     function cargarServicios() {
+
+// 1. CARGAR SERVICIOS
+function cargarServicios() {
   fetch(`${WEB_APP_URL}?action=obtenerServiciosActivos`)
     .then(res => res.json())
     .then(data => {
@@ -518,7 +520,7 @@ let carrito = [];
     .catch(err => console.error("Error cargando servicios:", err));
 }
 
-// 2. EVENTO CAMBIO DE TIPO (Filtra subopciones)
+// 2. EVENTO CAMBIO DE TIPO
 document.getElementById('tipoServicio').addEventListener('change', function() {
   const tipoElegido = this.value;
   const subSelect = document.getElementById('subServicio');
@@ -538,7 +540,7 @@ document.getElementById('tipoServicio').addEventListener('change', function() {
     const servicio = serviciosDisponibles.find(s => s.tipo === tipoElegido);
     if (servicio) {
       subSelect.dataset.codigoServicio = servicio.codigo;
-      actualizarPrecioYDuracion(servicio.codigo);
+      actualizarPrecioYDuracion(servicio.codigo); // <--- Llama a la función de abajo
     }
   } else {
     grupoSubServicio.classList.remove('oculto');
@@ -569,7 +571,7 @@ document.getElementById('subServicio').addEventListener('change', function() {
   }
 });
 
-// 4. ACTUALIZAR PRECIO Y DURACIÓN (Saca los datos del JSON local, sin viajar a Google)
+// 4. ESTA ES LA QUE FALTABA (Para que se vea el precio y tiempo)
 function actualizarPrecioYDuracion(codigo) {
   const servicio = serviciosDisponibles.find(s => s.codigo === codigo);
   if (servicio) {
@@ -580,7 +582,6 @@ function actualizarPrecioYDuracion(codigo) {
     }
   }
 }
-
 document.getElementById('btnAgregarServicio').addEventListener('click', () => {
   const tipoSelect = document.getElementById('tipoServicio');
   const subSelect = document.getElementById('subServicio');
