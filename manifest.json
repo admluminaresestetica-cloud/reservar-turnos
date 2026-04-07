@@ -3,7 +3,7 @@
   "name": "Luminares - Gestión de Turnos",
   "icons": [
     {
-      "src": "logo-lum-app.png",
+      "src": "logo-lum-appweb.png",
       "type": "image/png",
       "sizes": "512x512",
       "purpose": "any maskable"
