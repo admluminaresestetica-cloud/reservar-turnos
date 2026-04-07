@@ -459,6 +459,8 @@ input.resaltado[readonly]:focus {
 
 <script>
 
+const URL_APPS_SCRIPT = "https://script.google.com/macros/s/AKfycbz84gJYEa2YV63dKlCh69zW3H2Pekpy30vjcVKnZScsn0fkVG2Rd2ouga8qF9TEt2cB/exec"; // La que termina en /exec
+
       function actualizarBarraProgreso(paso) {
   const pasos = document.querySelectorAll('#barraProgreso .paso');
   pasos.forEach((el, idx) => {
@@ -473,113 +475,131 @@ input.resaltado[readonly]:focus {
       let configuracion = {};
       let serviciosDisponibles = [];
 
-function cargarConfiguracion() {
-  // Le pedimos a Google la configuración usando la URL que pegaste antes
-  fetch(WEB_APP_URL + "?action=obtenerConfiguracion")
-    .then(res => res.json())
-    .then(config => {
+     function cargarConfiguracion() {
+  fetch(`${URL_APPS_SCRIPT}?action=obtenerConfiguracion`)
+    .then(response => response.json())
+    .then(function(config) {
       configuracion = config;
 
-      // Colores predeterminados (tu lógica original)
-      document.documentElement.style.setProperty('--color-principal', configuracion["Color principal"] || '#2E8B57');
-      document.documentElement.style.setProperty('--color-secundario', configuracion["Color secundario"] || '#3CB371');
+      // Colores predeterminados si no están en la hoja
+      document.documentElement.style.setProperty('--color-principal', configuracion["Color principal"] || '#2E8B57'); // Verde esmeralda
+      document.documentElement.style.setProperty('--color-secundario', configuracion["Color secundario"] || '#3CB371'); // Verde medio
 
-      // Lógica de mostrar/ocultar WhatsApp
       if ((configuracion["Mostrar WhatsApp al agendar"] || "").toLowerCase() !== "sí") {
-        const campoWpp = document.getElementById('inputWhatsapp');
-        if(campoWpp) campoWpp.parentElement.style.display = 'none';
+        document.getElementById('inputWhatsapp').parentElement.style.display = 'none';
       }
 
-      // Activamos la barra de progreso
+      // Aquí llamamos para que el paso 1 quede activo al cargar la página
       actualizarBarraProgreso(1);
     })
-    .catch(err => console.error("Error al cargar config:", err));
+    .catch(error => console.error('Error al cargar configuración:', error));
 }
-
-  // 1. Asegurate de que esta sea la URL de la "Nueva Implementación"
-const WEB_APP_URL = "https://script.google.com/macros/s/AKfycbysdmWWbbtuhGn6ho8PWv4_TOybALmJt8gnPPvsTxkJrVZdMddbdJ8JVF5pK6HxsNm5/exec"; 
-
-let serviciosDisponibles = [];
-let carrito = [];
-
-// 2. FUNCIÓN PARA TRAER LOS SERVICIOS DESDE EL EXCEL
 function cargarServicios() {
-  // El secreto está en este "?action=obtenerServiciosActivos"
-  fetch(`${WEB_APP_URL}?action=obtenerServiciosActivos`)
-    .then(res => res.json())
-    .then(data => {
+  fetch(`${URL_APPS_SCRIPT}?action=obtenerServiciosActivos`)
+    .then(response => response.json())
+    .then(function(data) {
       serviciosDisponibles = data;
       const tipoSelect = document.getElementById('tipoServicio');
-      
-      // Limpiamos el selector y cargamos los tipos (Peluquería, Estética, etc.)
       tipoSelect.innerHTML = '<option value="">Elegí un tipo</option>';
       const tiposUnicos = [...new Set(data.map(s => s.tipo))].sort();
-      
       tiposUnicos.forEach(tipo => {
         const opt = document.createElement('option');
         opt.value = tipo;
         opt.textContent = tipo;
         tipoSelect.appendChild(opt);
       });
-      console.log("Servicios cargados correctamente");
+      document.getElementById('subServicio').innerHTML = '<option value="">Elegí una opción</option>';
     })
-    .catch(err => {
-      console.error("Error al cargar servicios:", err);
-    });
+    .catch(error => console.error('Error al cargar servicios:', error));
 }
 
-// 3. FUNCIÓN PARA MOSTRAR PRECIO Y DURACIÓN
-function actualizarPrecioYDuracion(codigo) {
-  const servicio = serviciosDisponibles.find(s => s.codigo === codigo);
-  if (servicio) {
-    const p = document.getElementById("inputPrecio");
-    const d = document.getElementById('inputDuracion');
-    if (p) p.value = servicio.precio ? "$" + servicio.precio : "";
-    if (d) d.value = servicio.duracion ? servicio.duracion + " min" : "";
-  }
-}
+document.getElementById('tipoServicio').addEventListener('change', function() {
+  const tipoElegido = this.value;
+  const subSelect = document.getElementById('subServicio');
+  const grupoSubServicio = document.getElementById('grupoSubServicio');
+  const campoPrecio = document.getElementById('inputPrecio');
 
-// 4. ESTO ES CLAVE: Ejecutar la función apenas carga la página
-window.onload = cargarServicios;
+  subSelect.innerHTML = '<option value="">Elegí una opción</option>';
+  campoPrecio.value = "";
 
-// 3. EVENTO CAMBIO DE SUBSERVICIO
-document.getElementById('subServicio').addEventListener('change', function() {
-  const codigoElegido = this.value;
-  if (codigoElegido) {
-    actualizarPrecioYDuracion(codigoElegido);
+  if (!tipoElegido) return;
+
+  const subopcionesFiltradas = serviciosDisponibles.filter(s => s.tipo === tipoElegido && s.subopcion.trim() !== '');
+
+  if (subopcionesFiltradas.length === 0) {
+    grupoSubServicio.classList.remove('visible');
+    grupoSubServicio.classList.add('oculto');
+
+    const servicio = serviciosDisponibles.find(s => s.tipo === tipoElegido);
+    if (servicio) {
+      subSelect.dataset.codigoServicio = servicio.codigo;
+      actualizarPrecio(servicio.codigo);
+    }
   } else {
-    document.getElementById('inputPrecio').value = "";
-    document.getElementById('inputDuracion').value = "";
+    grupoSubServicio.classList.remove('oculto');
+    grupoSubServicio.classList.add('visible');
+    const mapaSubopciones = new Map();
+    subopcionesFiltradas.forEach(s => {
+      if (!mapaSubopciones.has(s.subopcion)) {
+        mapaSubopciones.set(s.subopcion, s.codigo);
+      }
+    });
+    mapaSubopciones.forEach((codigo, subopcion) => {
+      const opt = document.createElement('option');
+      opt.value = codigo;
+      opt.textContent = subopcion;
+      subSelect.appendChild(opt);
+    });
   }
 });
 
-// 4. ESTA ES LA QUE FALTABA (Para que se vea el precio y tiempo)
-function actualizarPrecioYDuracion(codigo) {
-  const servicio = serviciosDisponibles.find(s => s.codigo === codigo);
-  if (servicio) {
-    document.getElementById("inputPrecio").value = servicio.precio ? "$" + servicio.precio : "No disponible";
-    const campoDuracion = document.getElementById('inputDuracion');
-    if (campoDuracion) {
-      campoDuracion.value = servicio.duracion ? servicio.duracion + " min" : "No disponible";
-    }
+document.getElementById('subServicio').addEventListener('change', function() {
+  const codigoElegido = this.value;
+  if (codigoElegido) {
+    actualizarPrecio(codigoElegido);
+  } else {
+    document.getElementById('inputPrecio').value = "";
   }
+});
+
+function actualizarPrecio(codigo) {
+  fetch(`${URL_APPS_SCRIPT}?action=obtenerPrecioServicio&codigo=${codigo}`)
+    .then(response => response.json())
+    .then(function(precio) {
+      document.getElementById("inputPrecio").value = precio ? "$" + precio : "No disponible";
+    })
+    .catch(error => console.error('Error al actualizar precio:', error));
+
+  actualizarDuracion(codigo);
 }
+
+function actualizarDuracion(codigo) {
+  fetch(`${URL_APPS_SCRIPT}?action=obtenerDuracionServicio&codigo=${codigo}`)
+    .then(response => response.json())
+    .then(function(duracion) {
+      const campoDuracion = document.getElementById('inputDuracion');
+      if (campoDuracion) {
+        campoDuracion.value = duracion ? duracion + " min" : "No disponible";
+      }
+    })
+    .catch(error => console.error('Error al actualizar duración:', error));
+}
+
+let carrito = [];
+
 document.getElementById('btnAgregarServicio').addEventListener('click', () => {
   const tipoSelect = document.getElementById('tipoServicio');
   const subSelect = document.getElementById('subServicio');
   const grupoSubServicio = document.getElementById('grupoSubServicio');
   
-  // CORRECCIÓN: Capturamos el valor del input de duración
   const duracionTexto = document.getElementById('inputDuracion').value; 
   
-  // Determinamos el código dependiendo de si hay subopciones visibles o no
   const codigoSeleccionado = grupoSubServicio.classList.contains('oculto') 
     ? subSelect.dataset.codigoServicio 
     : subSelect.value;
     
   const tipoSeleccionado = tipoSelect.value;
 
-  // Validaciones básicas
   if (!tipoSeleccionado) {
     alert('Por favor, elegí un tipo de servicio.');
     return;
@@ -593,35 +613,28 @@ document.getElementById('btnAgregarServicio').addEventListener('click', () => {
     return;
   }
 
-  // CORRECCIÓN: Convertimos el texto "60 min" a número (60)
   const duracionVal = parseInt(duracionTexto.replace(' min', '')) || 30;
 
-  // Procesamos el precio
   const precioTexto = document.getElementById('inputPrecio').value;
   let precio = 0;
   if (precioTexto.includes('$')) {
     precio = parseFloat(precioTexto.replace('$', '').replace(',', '.')) || 0;
   }
 
-  // AGREGAMOS AL CARRITO (Ahora con el dato de duración incluido)
   carrito.push({
     codigo: codigoSeleccionado,
     tipo: tipoSeleccionado,
     subopcion: (grupoSubServicio.classList.contains('oculto') ? "" : subSelect.options[subSelect.selectedIndex].textContent),
     precio: precio,
-    duracion: duracionVal // <--- ESTE ES EL DATO CLAVE
+    duracion: duracionVal 
   });
 
   actualizarCarritoUI();
   
-  // Opcional: limpiar selecciones para agregar otro
   subSelect.value = "";
   document.getElementById('inputPrecio').value = "";
   document.getElementById('inputDuracion').value = "";
 });
-
-
-const WEB_APP_URL = "https://script.google.com/macros/s/AKfycbysdmWWbbtuhGn6ho8PWv4_TOybALmJt8gnPPvsTxkJrVZdMddbdJ8JVF5pK6HxsNm5/exec";
 
 function actualizarCarritoUI() {
   const lista = document.getElementById('listaCarrito');
@@ -736,40 +749,41 @@ function cargarHorasDisponibles() {
   const fecha = document.getElementById('inputFecha').value;
   if (!fecha) return;
 
-  // 1. CALCULAMOS LA DURACIÓN TOTAL DEL CARRITO (Suma de todos los servicios elegidos)
   const duracionTotalRequerida = carrito.reduce((acc, item) => acc + item.duracion, 0);
-
-  // Si por alguna razón el carrito está vacío, pedimos un mínimo de 30 min
   const tiempoAEnviar = duracionTotalRequerida > 0 ? duracionTotalRequerida : 30;
 
   const select = document.getElementById('selectHora');
   select.innerHTML = '<option value="">Buscando disponibilidad...</option>';
 
-  // 2. PASAMOS LA FECHA Y LA DURACIÓN TOTAL AL SERVIDOR
-  google.script.run.withSuccessHandler(horas => {
-    select.innerHTML = '<option value="">Elegí un horario</option>';
+  // Cambio a fetch pasando fecha y tiempo como parámetros de URL
+  fetch(`${URL_APPS_SCRIPT}?action=obtenerHorasDisponibles&fecha=${fecha}&tiempo=${tiempoAEnviar}`)
+    .then(response => response.json())
+    .then(horas => {
+      select.innerHTML = '<option value="">Elegí un horario</option>';
 
-    if (!horas || horas.length === 0) {
-      const opt = document.createElement('option');
-      opt.value = '';
-      opt.textContent = 'No hay espacio suficiente para el tiempo solicitado';
-      select.appendChild(opt);
-      return;
-    }
+      if (!horas || horas.length === 0) {
+        const opt = document.createElement('option');
+        opt.value = '';
+        opt.textContent = 'No hay espacio suficiente para el tiempo solicitado';
+        select.appendChild(opt);
+        return;
+      }
 
-    horas.forEach(hora => {
-      const opt = document.createElement('option');
-      opt.value = hora;
-      opt.textContent = hora;
-      select.appendChild(opt);
+      horas.forEach(hora => {
+        const opt = document.createElement('option');
+        opt.value = hora;
+        opt.textContent = hora;
+        select.appendChild(opt);
+      });
+
+      select.addEventListener('change', function() {
+        sessionStorage.setItem('horaSeleccionada', this.value);
+      });
+    })
+    .catch(error => {
+      console.error('Error al cargar horas:', error);
+      select.innerHTML = '<option value="">Error al cargar horarios</option>';
     });
-
-    // Guardar selección en el navegador
-    select.addEventListener('change', function() {
-      sessionStorage.setItem('horaSeleccionada', this.value);
-    });
-    
-  }).obtenerHorasDisponibles(fecha, tiempoAEnviar); // <--- CAMBIO CLAVE: Enviamos el tiempo total
 }
 
 
@@ -788,23 +802,22 @@ function seleccionarHorario(btn) {
   
   if (!check || !check.checked) {
     alert("⚠️ Debes aceptar los Términos y Condiciones (política de seña y precios) para confirmar tu reserva.");
-    if(check) check.focus(); // Resalta el cuadrito para el cliente
-    return; // ⛔ Frena todo aquí mismo
+    if(check) check.focus();
+    return;
   }
   const fecha = document.getElementById('inputFecha').value;
   const hora = sessionStorage.getItem('horaSeleccionada');
   const btnConfirmar = document.getElementById('btnConfirmarTurno');
   const mensaje = document.getElementById('mensajeConfirmacion');
 
-  // 🔹 Limpiar mensaje previo
   mensaje.textContent = '';
-  mensaje.style.color = '#28a745'; // verde predeterminado
+  mensaje.style.color = '#28a745';
 
   if (!hora) {
-  mensaje.textContent = "Por favor seleccioná un horario.";
-  mensaje.style.color = '#d9534f';
-  return;
-}
+    mensaje.textContent = "Por favor seleccioná un horario.";
+    mensaje.style.color = '#d9534f';
+    return;
+  }
 
   const nombre = sessionStorage.getItem('cliente');
   const whatsapp = sessionStorage.getItem('whatsapp');
@@ -817,77 +830,68 @@ function seleccionarHorario(btn) {
 
   btnConfirmar.disabled = true;
 
-  // 🚀 REEMPLAZO FINAL PARA GITHUB (Fetch + Botón de WhatsApp)
-  btnConfirmar.disabled = true;
-  btnConfirmar.innerText = "⏳ Enviando...";
+  // Preparamos los datos para enviar
+  const datos = {
+    action: "guardarTurno",
+    fecha: fecha,
+    hora: hora,
+    nombre: nombre,
+    whatsapp: whatsapp,
+    carrito: carrito
+  };
 
-  fetch(WEB_APP_URL, {
-    method: "POST",
-    mode: "no-cors", 
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({
-      fecha: fecha,
-      hora: hora,
-      nombre: nombre,
-      whatsapp: whatsapp,
-      servicios: carrito
-    })
+  fetch(URL_APPS_SCRIPT, {
+    method: 'POST',
+    body: JSON.stringify(datos)
   })
-  .then(() => {
+  .then(response => response.json())
+  .then((respuesta) => {
     const modal = document.getElementById('modalConfirmacion');
     const texto = document.getElementById('textoConfirmacion');
 
     modal.classList.remove('oculto');
-    
-    // Limpiamos el número de símbolos para el link de WhatsApp
-    const numLimpio = whatsapp.replace(/\D/g, ''); 
+    texto.innerHTML = "✨ Procesando tu reserva...";
 
-    texto.innerHTML = `
-      <div style="padding:15px; text-align:center;">
-        <h3 style="color:#22c55e; margin-top:0;">¡Reserva Enviada!</h3>
-        <p style="margin:5px 0; font-size:0.9rem; color:#666;">Para recibir tu código de gestión:</p>
-        
-        <a href="https://wa.me/${numLimpio}?text=Hola!%20Acabo%20de%20reservar%20un%20turno%20a%20nombre%20de%20${encodeURIComponent(nombre)}.%20Confirmame%20el%20turno%20por%20acá." 
-           target="_blank"
-           style="background:#25d366; color:white; padding:15px; display:block; text-decoration:none; border-radius:10px; margin:15px 0; font-weight:bold; font-size:1.1rem; box-shadow: 0 4px 10px rgba(37,211,102,0.3);">
-           📲 AVISAR POR WHATSAPP
-        </a>
+    setTimeout(() => {
+      texto.innerHTML = `
+        <div style="padding:15px; text-align:center;">
+          <h3 style="color:#22c55e; margin-top:0;">¡Reserva Confirmada!</h3>
+          <p style="margin:5px 0; font-size:0.9rem; color:#666;">TU CÓDIGO DE GESTIÓN:</p>
+          
+          <div style="background:#f3f4f6; padding:15px; border-radius:10px; font-size:1.8rem; font-weight:bold; color:#111; margin:15px 0; border:2px dashed #22c55e;">
+            ${respuesta.codigo}
+          </div>
 
-        <p style="font-size:0.8rem; color:#888; margin-bottom:20px;">
-          Tocá el botón verde para avisarnos. <br>
-          <b>¡Tu turno ya se guardó en el sistema!</b>
-        </p>
+          <p style="font-size:0.8rem; color:#888; margin-bottom:20px;">
+            Guardá este código para poder <br><strong>consultar o cancelar</strong> tu turno.
+          </p>
 
-        <button onclick="finalizarYLimpiar()" 
-                style="background:#22c55e; color:white; border:none; padding:12px; border-radius:8px; cursor:pointer; font-weight:bold; width:100%; font-size:1rem;">
-          ENTENDIDO, FINALIZAR
-        </button>
-      </div>
-    `;
-    btnConfirmar.disabled = false;
-    btnConfirmar.innerText = "Confirmar Turno";
+          <button onclick="finalizarYLimpiar()" 
+                  style="background:#22c55e; color:white; border:none; padding:12px; border-radius:8px; cursor:pointer; font-weight:bold; width:100%; font-size:1rem;">
+            ENTENDIDO, FINALIZAR
+          </button>
+        </div>
+      `;
+      
+      btnConfirmar.disabled = false; 
+    }, 1500);
   })
   .catch(err => {
-    console.error("Error:", err);
-    alert("Hubo un problema de conexión. Intentá de nuevo.");
+    const mensajeError = document.getElementById('mensajeConfirmacion'); 
+    mensajeError.textContent = err.message || "Error al conectar con el servidor";
+    mensajeError.style.color = '#d9534f';
     btnConfirmar.disabled = false;
-    btnConfirmar.innerText = "Confirmar Turno";
   });
-
+}
 
 function actualizarPrecioTotal() {
   const selectServicios = document.getElementById('tipoServicio');
   let total = 0;
-
-  // Obtenemos todas las opciones seleccionadas
   const opcionesSeleccionadas = Array.from(selectServicios.selectedOptions);
-
   opcionesSeleccionadas.forEach(opcion => {
-    const precio = parseFloat(opcion.dataset.precio) || 0; // suponiendo que el precio está en dataset
+    const precio = parseFloat(opcion.dataset.precio) || 0;
     total += precio;
   });
-
-  // Actualizamos el input de precio
   document.getElementById('inputPrecio').value = total.toFixed(2);
 }
 
@@ -901,16 +905,22 @@ document.getElementById('inputFecha').addEventListener('change', function() {
     return;
   }
 
-  google.script.run.withSuccessHandler(function(horas) {
-    if (!horas || horas.length === 0) {
-      contenedor.innerHTML = 'No hay horarios ocupados para esta fecha.';
-    } else {
-      contenedor.innerHTML = 'Horarios ocupados: ' + horas.join(', ');
-    }
-  }).obtenerHorasOcupadas(fecha);
+  // Cambio a fetch para obtener horarios ocupados
+  fetch(`${URL_APPS_SCRIPT}?action=obtenerHorasOcupadas&fecha=${fecha}`)
+    .then(response => response.json())
+    .then(function(horas) {
+      if (!horas || horas.length === 0) {
+        contenedor.innerHTML = 'No hay horarios ocupados para esta fecha.';
+      } else {
+        contenedor.innerHTML = 'Horarios ocupados: ' + horas.join(', ');
+      }
+    })
+    .catch(error => {
+      console.error('Error:', error);
+      contenedor.innerHTML = 'Error al cargar horarios ocupados.';
+    });
 });
-// Esta función apaga una vista y prende la otra
-// 1. EL INTERRUPTOR (Lo que ya tenés y me pasaste recién)
+
 function alternarVistas(destino) {
   const vReserva = document.getElementById('vistaReserva');
   const vGestion = document.getElementById('vistaGestion');
@@ -944,8 +954,10 @@ function consultarTurnoPorCodigo() {
   btn.textContent = "🔍 Buscando...";
   contenedor.innerHTML = "";
 
-  google.script.run
-    .withSuccessHandler(function(turno) {
+  // Cambio a fetch para buscar el turno
+  fetch(`${URL_APPS_SCRIPT}?action=buscarTurnoPorCodigo&codigo=${codigo}`)
+    .then(response => response.json())
+    .then(function(turno) {
       btn.disabled = false;
       btn.textContent = "BUSCAR RESERVA";
 
@@ -954,7 +966,7 @@ function consultarTurnoPorCodigo() {
         return;
       }
 
-contenedor.innerHTML = `
+      contenedor.innerHTML = `
         <div style="background:#f3f4f6; padding:20px; border-radius:12px; border:1px solid #ddd; margin-top:15px; text-align:left;">
           <h4 style="margin-top:0; color:#333;">📋 Datos de tu Reserva</h4>
           <p><strong>👤 Cliente:</strong> ${turno.nombre}</p>
@@ -973,13 +985,13 @@ contenedor.innerHTML = `
         </div>
       `;
     })
-    .withFailureHandler(function(err) {
+    .catch(function(err) {
       btn.disabled = false;
       btn.textContent = "BUSCAR RESERVA";
       alert("Error: " + err.message);
-    })
-    .buscarTurnoPorCodigo(codigo);
+    });
 }
+
 function ejecutarCancelacion(codigo) {
   if (!confirm("¿Estás seguro de que querés cancelar este turno? Esta acción no se puede deshacer.")) {
     return;
@@ -988,29 +1000,32 @@ function ejecutarCancelacion(codigo) {
   const contenedor = document.getElementById('resultadoBusqueda');
   contenedor.innerHTML = "<p style='text-align:center;'>⏳ Cancelando turno...</p>";
 
-  google.script.run
-    .withSuccessHandler(function(respuesta) {
-      if (respuesta === "OK") {
+  // Cambio a fetch para eliminar el turno
+  fetch(`${URL_APPS_SCRIPT}?action=eliminarTurnoPorCodigo&codigo=${codigo}`)
+    .then(response => response.text()) // Usamos text() porque la respuesta es "OK"
+    .then(function(respuesta) {
+      // Limpiamos comillas si la respuesta viene como JSON string
+      const res = respuesta.replace(/"/g, ''); 
+      
+      if (res === "OK") {
         contenedor.innerHTML = `
           <div style="color:#155724; background:#d4edda; padding:15px; border-radius:8px; border:1px solid #c3e6cb; text-align:center;">
             ✅ <strong>¡Turno cancelado con éxito!</strong><br>
             El horario ya está disponible nuevamente.
           </div>`;
         
-        // Limpiamos el buscador después de 3 segundos y volvemos al inicio
         setTimeout(() => {
           document.getElementById('inputCodigoConsulta').value = "";
           alternarVistas('reserva');
         }, 3500);
         
       } else {
-        alert("Error: " + respuesta);
+        alert("Error: " + res);
       }
     })
-    .withFailureHandler(function(err) {
+    .catch(function(err) {
       alert("Error al conectar con el servidor: " + err.message);
-    })
-    .eliminarTurnoPorCodigo(codigo);
+    });
 }
 
 function finalizarYLimpiar() {
