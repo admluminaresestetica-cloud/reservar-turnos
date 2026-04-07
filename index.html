@@ -304,14 +304,65 @@ input.resaltado[readonly]:focus {
   box-shadow: 0 0 5px #3CB371;
 }
 
-</style>
-  </head>
+input.resaltado[readonly]:focus {
+  outline: none;
+  border-color: #3CB371;
+  box-shadow: 0 0 5px #3CB371;
+}
 
-    <!-- Barra de progreso -->
-  <div id="barraProgreso" class="barra-progreso">
-    <div class="paso">1</div>
-    <div class="paso">2</div>
-  </div>
+#progreso-container {
+  max-width: 500px;
+  margin-left: auto;
+  margin-right: auto;
+}
+
+/* Animación sutil para que la barra brille un poquito */
+#progreso-bar {
+  box-shadow: 0 0 10px rgba(190, 24, 93, 0.2);
+}
+
+/* --- ESTILOS PARA EL BOTÓN DE WHATSAPP --- */
+.whatsapp-float {
+  position: fixed;
+  width: 55px;
+  height: 55px;
+  bottom: 20px;
+  right: 20px;
+  background-color: #25d366;
+  color: #FFF;
+  border-radius: 50px;
+  text-align: center;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 2px 2px 10px rgba(0,0,0,0.2);
+  z-index: 1000;
+  transition: all 0.3s ease;
+  text-decoration: none;
+}
+
+.whatsapp-float:hover {
+  transform: scale(1.1);
+  background-color: #128c7e;
+}
+
+.whatsapp-icon {
+  width: 35px;
+  height: 35px;
+}
+
+@media screen and (max-width: 767px) {
+  .whatsapp-float {
+    width: 50px;
+    height: 50px;
+    bottom: 15px;
+    right: 15px;
+  }
+}
+
+</style>
+<script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
+  </head>
 
  <body onload="cargarConfiguracion(); cargarServicios();">
 
@@ -325,9 +376,19 @@ input.resaltado[readonly]:focus {
 <div id="vistaReserva">
   <h2>Reservar Turno Luminares</h2>
 
-  <div id="modalConfirmacion" class="modal-confirmacion oculto">
+<div id="progreso-container" style="width: 100%; margin: 20px 0; padding: 0 10px;">
+  <div style="display: flex; justify-content: space-between; margin-bottom: 8px;">
+    <span id="step-label" style="font-size: 0.85rem; color: #be185d; font-weight: bold; text-transform: uppercase;">Paso 1: Selección</span>
+    <span id="step-percent" style="font-size: 0.85rem; color: #666;">10%</span>
+  </div>
+  <div style="width: 100%; background-color: #f3f4f6; height: 8px; border-radius: 10px; overflow: hidden; border: 1px solid #eee;">
+    <div id="progreso-bar" style="width: 10%; height: 100%; background: linear-gradient(90deg, #f472b6, #be185d); transition: width 0.4s ease;"></div>
+  </div>
+</div>
+
+<div id="modalConfirmacion" class="modal-confirmacion oculto">
   <div class="contenido-modal">
-    <div class="checkmark">&#10004;</div> <!-- símbolo ✓ -->
+    <div class="checkmark">&#10004;</div> 
     <div id="textoConfirmacion">Reservando...</div>
   </div>
 </div>
@@ -465,15 +526,24 @@ input.resaltado[readonly]:focus {
 
 const URL_APPS_SCRIPT = "https://script.google.com/macros/s/AKfycbz84gJYEa2YV63dKlCh69zW3H2Pekpy30vjcVKnZScsn0fkVG2Rd2ouga8qF9TEt2cB/exec"; // La que termina en /exec
 
-      function actualizarBarraProgreso(paso) {
-  const pasos = document.querySelectorAll('#barraProgreso .paso');
-  pasos.forEach((el, idx) => {
-    if (idx === paso - 1) {
-      el.classList.add('activo');
-    } else {
-      el.classList.remove('activo');
-    }
-  });
+function actualizarBarraProgreso(paso) {
+  const bar = document.getElementById('progreso-bar');
+  const label = document.getElementById('step-label');
+  const percent = document.getElementById('step-percent');
+
+  if (paso === 1) {
+    bar.style.width = '10%'; // Arranca bajito, solo como indicador
+    label.innerText = 'Paso 1: Tus Datos y Servicios';
+    percent.innerText = '10%';
+  } else if (paso === 2) {
+    bar.style.width = '60%'; // Salto grande porque ya eligió qué hacerse
+    label.innerText = 'Paso 2: Elegí Fecha y Hora';
+    percent.innerText = '60%';
+  } else if (paso === 3) {
+    bar.style.width = '100%'; // ¡Listo para confirmar!
+    label.innerText = 'Paso 3: Revisar y Confirmar';
+    percent.innerText = '100%';
+  }
 }
 
       let configuracion = {};
@@ -852,6 +922,11 @@ function confirmarTurno() {
     const modal = document.getElementById('modalConfirmacion');
     const texto = document.getElementById('textoConfirmacion');
 
+    // --- MEJORAS VISUALES AQUÍ ---
+    actualizarBarraProgreso(3); // Llevamos la barra al 100%
+    lanzarFestejo();            // ¡Lanzamos el confetti!
+    // -----------------------------
+
     modal.classList.remove('oculto');
     texto.innerHTML = "✨ Procesando tu reserva...";
 
@@ -867,7 +942,7 @@ function confirmarTurno() {
 
           <button id="btnCopiar" onclick="copiarCodigo('${respuesta.codigo}')" 
                   style="background:#db2777; color:white; border:none; padding:10px 20px; border-radius:50px; cursor:pointer; font-weight:bold; font-size:0.9rem; margin-bottom:15px; width: auto; display: inline-block; box-shadow: 0 2px 4px rgba(0,0,0,0.2);">
-             📋 COPIAR CÓDIGO
+              📋 COPIAR CÓDIGO
           </button>
 
           <p style="font-size:0.85rem; color:#6b7280; margin-bottom:20px; line-height: 1.4;">
@@ -1104,6 +1179,43 @@ function copiarCodigo(texto) {
     alert("Error al copiar. Por favor, anotalo manualmente.");
   });
 }
+
+function actualizarProgreso(paso) {
+  const bar = document.getElementById('progreso-bar');
+  const label = document.getElementById('step-label');
+  const percent = document.getElementById('step-percent');
+
+  if (paso === 1) {
+    bar.style.width = '33%';
+    label.innerText = 'Paso 1: Servicios';
+    percent.innerText = '33%';
+  } else if (paso === 2) {
+    bar.style.width = '66%';
+    label.innerText = 'Paso 2: Fecha y Hora';
+    percent.innerText = '66%';
+  } else if (paso === 3) {
+    bar.style.width = '100%';
+    label.innerText = 'Paso 3: Confirmación';
+    percent.innerText = '100%';
+  }
+}
+
+function lanzarFestejo() {
+  // Tiramos una explosión de confetti
+  confetti({
+    particleCount: 150,
+    spread: 70,
+    origin: { y: 0.6 },
+    colors: ['#f472b6', '#be185d', '#ffffff', '#fbbf24'] // Colores de Luminares (Rosas, blanco y dorado)
+  });
+}
     </script>
+
+    <a href="https://wa.me/5493413954355?text=Hola!%20Tengo%20una%20duda%20sobre%20un%20turno%20en%20Luminares..." 
+   class="whatsapp-float" 
+   target="_blank" 
+   rel="noopener noreferrer">
+   <img src="https://upload.wikimedia.org/wikipedia/commons/6/6b/WhatsApp.svg" alt="WhatsApp" class="whatsapp-icon">
+</a>
   </body>
 </html>
