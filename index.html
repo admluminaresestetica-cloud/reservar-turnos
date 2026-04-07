@@ -407,7 +407,7 @@ input.resaltado[readonly]:focus {
     <input type="checkbox" id="checkTerminos" style="width: 18px; height: 18px; cursor: pointer;">
     <span>
       He leído y acepto los <a href="javascript:void(0)" onclick="abrirModalTerminos()" style="color: #e67e22; font-weight: bold; text-decoration: underline;">Términos y Condiciones</a> 
-      (incluye política de seña, tolerancia y precios).
+      (incluye política de seña, tolerancia, precios, ver mas).
     </span>
   </label>
 </div>
@@ -421,6 +421,8 @@ input.resaltado[readonly]:focus {
       <p><strong>2. Tolerancia:</strong> Puntualidad: Contamos con una tolerancia de 15 minutos. Pasado ese tiempo, el turno podría sufrir demoras o quedar sujeto a la disponibilidad del momento para no retrasar la agenda de los demás clientes.</p>
       <p><strong>3. Precios:</strong> Los valores son estimativos. El presupuesto final se confirma el día del turno según la complejidad del trabajo.</p>
       <p><strong>4. Datos:</strong> Sus datos solo se usan para la gestión del turno y recordatorios de WhatsApp.</p>
+      <p><strong>5. Preparación:</strong> Favor de asistir con la zona a tratar limpia (sin maquillaje/esmaltado previo si no se avisó para retiro).</p>
+      <p><strong>6. Salud:</strong> Al confirmar, declarás no tener alergias a los productos estándar del servicio elegido.</p>
     </div>
     <button onclick="cerrarModalTerminos()" style="margin-top: 20px; width: 100%; padding: 10px; background: #f39c12; color: white; border: none; border-radius: 8px; font-weight: bold; cursor: pointer;">ENTENDIDO</button>
   </div>
@@ -799,7 +801,7 @@ function seleccionarHorario(btn) {
   sessionStorage.setItem('horaSeleccionada', btn.dataset.hora);
 }
 
-  function confirmarTurno() {
+function confirmarTurno() {
   const check = document.getElementById('checkTerminos');
   
   if (!check || !check.checked) {
@@ -832,7 +834,6 @@ function seleccionarHorario(btn) {
 
   btnConfirmar.disabled = true;
 
-  // Preparamos los datos para enviar
   const datos = {
     action: "guardarTurno",
     fecha: fecha,
@@ -856,20 +857,25 @@ function seleccionarHorario(btn) {
 
     setTimeout(() => {
       texto.innerHTML = `
-        <div style="padding:15px; text-align:center;">
-          <h3 style="color:#22c55e; margin-top:0;">¡Reserva Confirmada!</h3>
-          <p style="margin:5px 0; font-size:0.9rem; color:#666;">TU CÓDIGO DE GESTIÓN:</p>
+        <div style="padding:15px; text-align:center; font-family: sans-serif; background: white;">
+          <h3 style="color:#22c55e; margin-top:0; font-size: 1.4rem;">¡Reserva Confirmada!</h3>
+          <p style="margin:5px 0; font-size:0.95rem; color:#4b5563; font-weight: 500;">TU CÓDIGO DE GESTIÓN:</p>
           
-          <div style="background:#f3f4f6; padding:15px; border-radius:10px; font-size:1.8rem; font-weight:bold; color:#111; margin:15px 0; border:2px dashed #22c55e;">
+          <div style="background:#111827; padding:20px; border-radius:12px; font-size:2.2rem; font-weight: 800; color:#ffffff; margin:15px 0; border:2px dashed #22c55e; letter-spacing: 2px; box-shadow: 0 4px 6px rgba(0,0,0,0.1);">
             ${respuesta.codigo}
           </div>
 
-          <p style="font-size:0.8rem; color:#888; margin-bottom:20px;">
+          <button id="btnCopiar" onclick="copiarCodigo('${respuesta.codigo}')" 
+                  style="background:#db2777; color:white; border:none; padding:10px 20px; border-radius:50px; cursor:pointer; font-weight:bold; font-size:0.9rem; margin-bottom:15px; width: auto; display: inline-block; box-shadow: 0 2px 4px rgba(0,0,0,0.2);">
+             📋 COPIAR CÓDIGO
+          </button>
+
+          <p style="font-size:0.85rem; color:#6b7280; margin-bottom:20px; line-height: 1.4;">
             Guardá este código para poder <br><strong>consultar o cancelar</strong> tu turno.
           </p>
 
           <button onclick="finalizarYLimpiar()" 
-                  style="background:#22c55e; color:white; border:none; padding:12px; border-radius:8px; cursor:pointer; font-weight:bold; width:100%; font-size:1rem;">
+                  style="background:#22c55e; color:white; border:none; padding:14px; border-radius:10px; cursor:pointer; font-weight:bold; width:100%; font-size:1.1rem; text-transform: uppercase;">
             ENTENDIDO, FINALIZAR
           </button>
         </div>
@@ -885,7 +891,6 @@ function seleccionarHorario(btn) {
     btnConfirmar.disabled = false;
   });
 }
-
 function actualizarPrecioTotal() {
   const selectServicios = document.getElementById('tipoServicio');
   let total = 0;
@@ -968,8 +973,8 @@ function consultarTurnoPorCodigo() {
         return;
       }
 
-      contenedor.innerHTML = `
-        <div style="background:#f3f4f6; padding:20px; border-radius:12px; border:1px solid #ddd; margin-top:15px; text-align:left;">
+ contenedor.innerHTML = `
+        <div style="background:#f3f4f6; padding:20px; border-radius:12px; border:1px solid #ddd; margin-top:15px; text-align:left; font-family: sans-serif;">
           <h4 style="margin-top:0; color:#333;">📋 Datos de tu Reserva</h4>
           <p><strong>👤 Cliente:</strong> ${turno.nombre}</p>
           <p><strong>📅 Fecha:</strong> ${turno.fecha}</p>
@@ -980,8 +985,22 @@ function consultarTurnoPorCodigo() {
           
           <p style="font-size:0.85rem; color:#666; margin-bottom:10px;">Si no podés asistir, por favor cancelá el turno:</p>
           
-          <button type="button" onclick="ejecutarCancelacion('${turno.codigo}')" 
-                  style="background: #e11d48; color: white; width: 100%; padding: 12px; border-radius: 8px; border:none; cursor:pointer; font-weight:bold; font-size:1rem;">
+          <div style="background: #fffbeb; border: 1px solid #fef3c7; padding: 12px; border-radius: 10px; margin-bottom: 20px; display: flex; align-items: flex-start; gap: 10px;">
+            <span style="font-size: 1.2rem;">⚠️</span>
+            <div>
+              <p style="margin: 0 0 5px 0; color: #92400e; font-weight: bold; font-size: 0.85rem; text-transform: uppercase;">
+                Información Importante
+              </p>
+              <ul style="margin: 0; padding-left: 15px; font-size: 0.8rem; color: #92400e; line-height: 1.4;">
+                <li><b>Tratamientos:</b> Avisar con 24 hs de anticipación.</li>
+                <li><b>Depilación Láser:</b> Avisar con 72 hs de anticipación.</li>
+              </ul>
+              <p style="margin-top: 5px; font-size: 0.75rem; color: #b45309; font-weight: 500;">
+                De lo contrario, la seña no podrá ser devuelta.
+              </p>
+            </div>
+          </div> <button type="button" onclick="ejecutarCancelacion('${turno.codigo}')" 
+                  style="background: #e11d48; color: white; width: 100%; padding: 14px; border-radius: 8px; border:none; cursor:pointer; font-weight:bold; font-size:1rem; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
             ❌ CANCELAR MI TURNO
           </button>
         </div>
@@ -1069,6 +1088,21 @@ window.onclick = function(event) {
   if (event.target == modal) {
     modal.style.display = "none";
   }
+}
+function copiarCodigo(texto) {
+  navigator.clipboard.writeText(texto).then(() => {
+    const btn = document.getElementById('btnCopiar');
+    const originalText = btn.innerHTML;
+    btn.innerHTML = '✅ ¡COPIADO!';
+    btn.style.background = '#15803d'; // Un verde más oscuro para el feedback
+    
+    setTimeout(() => {
+      btn.innerHTML = originalText;
+      btn.style.background = '#6366f1'; // Color original (puse un azul/violeta para diferenciar)
+    }, 2000);
+  }).catch(err => {
+    alert("Error al copiar. Por favor, anotalo manualmente.");
+  });
 }
     </script>
   </body>
