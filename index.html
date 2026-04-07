@@ -478,7 +478,7 @@ const URL_APPS_SCRIPT = "https://script.google.com/macros/s/AKfycbz84gJYEa2YV63d
       let serviciosDisponibles = [];
 
      function cargarConfiguracion() {
-  fetch(`${URL_APPS_SCRIPT}?action=obtenerConfiguracion`)
+  fetch(`${URL_APPS_SCRIPT}?action=obtenerConfiguracion&t=${Date.now()}`)
     .then(response => response.json())
     .then(function(config) {
       configuracion = config;
@@ -497,7 +497,7 @@ const URL_APPS_SCRIPT = "https://script.google.com/macros/s/AKfycbz84gJYEa2YV63d
     .catch(error => console.error('Error al cargar configuración:', error));
 }
 function cargarServicios() {
-  fetch(`${URL_APPS_SCRIPT}?action=obtenerServiciosActivos`)
+  fetch(`${URL_APPS_SCRIPT}?action=obtenerServiciosActivos&t=${Date.now()}`)
     .then(response => response.json())
     .then(function(data) {
       serviciosDisponibles = data;
@@ -565,7 +565,7 @@ document.getElementById('subServicio').addEventListener('change', function() {
 });
 
 function actualizarPrecio(codigo) {
-  fetch(`${URL_APPS_SCRIPT}?action=obtenerPrecioServicio&codigo=${codigo}`)
+  fetch(`${URL_APPS_SCRIPT}?action=obtenerPrecioServicio&codigo=${codigo}&t=${Date.now()}`)
     .then(response => response.json())
     .then(function(precio) {
       document.getElementById("inputPrecio").value = precio ? "$" + precio : "No disponible";
@@ -576,7 +576,7 @@ function actualizarPrecio(codigo) {
 }
 
 function actualizarDuracion(codigo) {
-  fetch(`${URL_APPS_SCRIPT}?action=obtenerDuracionServicio&codigo=${codigo}`)
+  fetch(`${URL_APPS_SCRIPT}?action=obtenerDuracionServicio&codigo=${codigo}&t=${Date.now()}`)
     .then(response => response.json())
     .then(function(duracion) {
       const campoDuracion = document.getElementById('inputDuracion');
@@ -758,7 +758,7 @@ function cargarHorasDisponibles() {
   select.innerHTML = '<option value="">Buscando disponibilidad...</option>';
 
   // Cambio a fetch pasando fecha y tiempo como parámetros de URL
-  fetch(`${URL_APPS_SCRIPT}?action=obtenerHorasDisponibles&fecha=${fecha}&tiempo=${tiempoAEnviar}`)
+  fetch(`${URL_APPS_SCRIPT}?action=obtenerHorasDisponibles&fecha=${fecha}&tiempo=${tiempoAEnviar}&t=${Date.now()}`)
     .then(response => response.json())
     .then(horas => {
       select.innerHTML = '<option value="">Elegí un horario</option>';
@@ -908,7 +908,7 @@ document.getElementById('inputFecha').addEventListener('change', function() {
   }
 
   // Cambio a fetch para obtener horarios ocupados
-  fetch(`${URL_APPS_SCRIPT}?action=obtenerHorasOcupadas&fecha=${fecha}`)
+  fetch(`${URL_APPS_SCRIPT}?action=obtenerHorasOcupadas&fecha=${fecha}&t=${Date.now()}`)
     .then(response => response.json())
     .then(function(horas) {
       if (!horas || horas.length === 0) {
@@ -957,7 +957,7 @@ function consultarTurnoPorCodigo() {
   contenedor.innerHTML = "";
 
   // Cambio a fetch para buscar el turno
-  fetch(`${URL_APPS_SCRIPT}?action=buscarTurnoPorCodigo&codigo=${codigo}`)
+  fetch(`${URL_APPS_SCRIPT}?action=buscarTurnoPorCodigo&codigo=${codigo}&t=${Date.now()}`)
     .then(response => response.json())
     .then(function(turno) {
       btn.disabled = false;
